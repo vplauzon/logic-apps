@@ -10,7 +10,8 @@ It can be deploy now:
 
 There are a few steps to follow afterwards:
 
-* Get the Callback URL for the Logic App with the following PowerShell command:```PowerShell
+* Get the Callback URL for the Logic App with the following PowerShell command:
+```PowerShell
 Get-AzureRmLogicAppTriggerCallbackUrl -ResourceGroupName <Resource Group Name> -Name pipeline -TriggerName manual
 ```
 * Populate the data factory with pipelines
