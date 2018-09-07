@@ -10,15 +10,16 @@ It can be deploy now:
 
 There are a few steps to follow afterwards:
 
-1. Get the Callback URL for the Logic App with the following PowerShell command:
-`PowerShell Get-AzureRmLogicAppTriggerCallbackUrl -ResourceGroupName <Resource Group Name> -Name pipeline -TriggerName manual`
-1. Populate the data factory with pipelines
-1. Create a table *dbo.Pipeline* in the *meta* database
+* Get the Callback URL for the Logic App with the following PowerShell command:```PowerShell
+Get-AzureRmLogicAppTriggerCallbackUrl -ResourceGroupName <Resource Group Name> -Name pipeline -TriggerName manual
+```
+* Populate the data factory with pipelines
+* Create a table *dbo.Pipeline* in the *meta* database
 ```sql
 CREATE TABLE [dbo].[Pipeline] (
     [PipelineName]       VARCHAR (32) NOT NULL,
     [ParentPipelineName] VARCHAR (32) NULL
 );
 ```
-1. Populate that table with a hierarchy of pipelines corresponding to the pipelines names created in data factory
-1. Authenticate the *df-connection-region* connection
+* Populate that table with a hierarchy of pipelines corresponding to the pipelines names created in data factory
+* Authenticate the *df-connection-region* connection
