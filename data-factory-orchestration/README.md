@@ -12,8 +12,9 @@ There are a few steps to follow afterwards:
 
 * Get the Callback URL for the Logic App with the following PowerShell command:
 ```PowerShell
-Get-AzureRmLogicAppTriggerCallbackUrl -ResourceGroupName <Resource Group Name> -Name pipeline -TriggerName manual
+(Get-AzureRmLogicAppTriggerCallbackUrl -ResourceGroupName <Resource Group Name> -Name pipeline -TriggerName manual).Value
 ```
+* Re-run the ARM template using that value as the *Logic App Call Back* parameter
 * Populate the data factory with pipelines
 * Create a table *dbo.Pipeline* in the *meta* database
 ```sql
