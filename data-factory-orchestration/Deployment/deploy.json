@@ -1,0 +1,343 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "SQL Server Name": {
+      "type": "string",
+      "metadata": {
+        "description": "SQL server name"
+      },
+      "defaultValue": "vpldemo"
+    },
+    "SQL Admin Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Username credential"
+      },
+      "defaultValue": "ludwig"
+    },
+    "SQL Admin Password": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password credential"
+      },
+      "defaultValue": "L<{ct?8f*N_)YXNH{#H2Ft%f>z'm4q"
+    },
+    "Data Factory Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the data factory resource"
+      },
+      "defaultValue": "vplfactory"
+    },
+    "Logic App Call Back": {
+      "type": "string",
+      "metadata": {
+        "description": "URL to call back the Logic App (recursively)"
+      },
+      "defaultValue": "https://prod-05.eastus2.logic.azure.com:443/workflows/ca9bb686541d44c3b7b8f46b99875596/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0"
+    }
+  },
+  "variables": {
+    "Single Quote": "'",
+    "SQL DB Name": "meta",
+    "Logic App Name": "pipeline",
+    "SQL Connection": "sql-connection-meta",
+    "Data Factory Connection": "df-connection-region",
+    "Data Factory id": "[resourceId('logic', 'Microsoft.DataFactory/factories', parameters('Data Factory Name'))]",
+    "Pipeline Path": "[concat(variables('Data Factory id'), '/pipelines/', '@{triggerOutputs()[', variables('Single Quote'), 'relativePathParameters',variables('Single Quote'), '][',variables('Single Quote'), 'pipelineName',variables('Single Quote'), ']}/CreateRun')]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Sql/servers",
+      "name": "[parameters('SQL Server Name')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "tags": {},
+      "properties": {
+        "administratorLogin": "[parameters('SQL Admin Name')]",
+        "administratorLoginPassword": "[parameters('SQL Admin Password')]"
+      },
+      "resources": [
+        {
+          "type": "databases",
+          "name": "[variables('SQL DB Name')]",
+          "apiVersion": "2014-04-01",
+          "location": "[resourceGroup().location]",
+          "tags": {},
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers/', parameters('SQL Server Name'))]"
+          ],
+          "properties": {
+            "edition": "Standard"
+          }
+        },
+        {
+          "type": "firewallRules",
+          "name": "allow-azure-firewall-rule",
+          "apiVersion": "2015-05-01-preview",
+          "tags": {},
+          "dependsOn": [
+            "[resourceId('Microsoft.Sql/servers/', parameters('SQL Server Name'))]"
+          ],
+          "properties": {
+            "startIpAddress": "0.0.0.0",
+            "endIpAddress": "0.0.0.0"
+          }
+        }
+      ]
+    },
+    {
+      "apiVersion": "2017-09-01-preview",
+      "type": "Microsoft.DataFactory/factories",
+      "name": "[parameters('Data Factory Name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "properties": {},
+      "resources": []
+    },
+    {
+      "apiVersion": "2016-06-01",
+      "type": "microsoft.web/connections",
+      "name": "[variables('SQL Connection')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Sql/servers/', parameters('SQL Server Name'))]"
+      ],
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/sql')]"
+        },
+        "displayName": "Meta DB Connection",
+        "parameterValues": {
+          "server": "[concat(parameters('SQL Server Name'), '.database.windows.net')]",
+          "database": "[variables('SQL DB Name')]",
+          "username": "[parameters('SQL Admin Name')]",
+          "password": "[parameters('SQL Admin Password')]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2016-06-01",
+      "type": "microsoft.web/connections",
+      "name": "[variables('Data Factory Connection')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
+      ],
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuredatafactory')]"
+        },
+        "displayName": "Regional Data Factory Connection"
+      }
+    },
+    {
+      "apiVersion": "2017-07-01",
+      "type": "Microsoft.Logic/workflows",
+      "name": "[variables('Logic App Name')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', variables('SQL Connection'))]",
+        "[resourceId('Microsoft.Web/connections', variables('Data Factory Connection'))]"
+      ],
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "Create_a_pipeline_run": {
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azuredatafactory']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "[variables('Pipeline Path')]",
+                "queries": {
+                  "x-ms-api-version": "2017-09-01-preview"
+                }
+              },
+              "runAfter": {},
+              "type": "ApiConnection"
+            },
+            "If-Pipeline-Succeeded": {
+              "actions": {
+                "Get_Children_Pipelines": {
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['sql']['connectionId']"
+                      }
+                    },
+                    "method": "get",
+                    "path": "/datasets/default/tables/@{encodeURIComponent(encodeURIComponent('[dbo].[Pipeline]'))}/items",
+                    "queries": {
+                      "$filter": "ParentPipelineName eq '@{triggerOutputs()['relativePathParameters']['pipelineName']}'",
+                      "$select": "PipelineName"
+                    }
+                  },
+                  "runAfter": {},
+                  "type": "ApiConnection"
+                },
+                "Loop_through_children": {
+                  "actions": {
+                    "Recursive-Call-Pipeline": {
+                      "inputs": {
+                        "method": "GET",
+                        "uri": "[parameters('Logic App Call Back')]"
+                      },
+                      "runAfter": {},
+                      "type": "Http"
+                    }
+                  },
+                  "foreach": "@body('Get_Children_Pipelines')?['value']",
+                  "runAfter": {
+                    "Get_Children_Pipelines": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Foreach"
+                }
+              },
+              "expression": {
+                "and": [
+                  {
+                    "equals": [
+                      "@body('Get_a_pipeline_run')?['status']",
+                      "Succeeded"
+                    ]
+                  }
+                ]
+              },
+              "runAfter": {
+                "Until": [
+                  "Succeeded"
+                ]
+              },
+              "type": "If"
+            },
+            "Response-Accepted": {
+              "inputs": {
+                "body": {
+                  "pipelineName": "@{triggerOutputs()['relativePathParameters']['pipelineName']}",
+                  "pipelineRunId": "@{body('Create_a_pipeline_run')?['runId']}",
+                  "workflowRun": "@{workflow().run.name}"
+                },
+                "statusCode": 202
+              },
+              "kind": "Http",
+              "runAfter": {
+                "Create_a_pipeline_run": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response"
+            },
+            "Response-Cant-Run-Pipeline": {
+              "inputs": {
+                "statusCode": 406
+              },
+              "kind": "Http",
+              "runAfter": {
+                "Create_a_pipeline_run": [
+                  "Failed"
+                ]
+              },
+              "type": "Response"
+            },
+            "Until": {
+              "actions": {
+                "Delay": {
+                  "inputs": {
+                    "interval": {
+                      "count": 5,
+                      "unit": "Second"
+                    }
+                  },
+                  "runAfter": {
+                    "Get_a_pipeline_run": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Wait"
+                },
+                "Get_a_pipeline_run": {
+                  "inputs": {
+                    "host": {
+                      "connection": {
+                        "name": "@parameters('$connections')['azuredatafactory']['connectionId']"
+                      }
+                    },
+                    "method": "get",
+                    "path": "/subscriptions/@{encodeURIComponent('a9f15356-c7b1-4864-980e-e9bca8b790dd')}/resourcegroups/@{encodeURIComponent('logic')}/providers/Microsoft.DataFactory/factories/@{encodeURIComponent('vpl-factory')}/pipelineRuns/@{encodeURIComponent(body('Create_a_pipeline_run')?['runId'])}",
+                    "queries": {
+                      "x-ms-api-version": "2017-09-01-preview"
+                    }
+                  },
+                  "runAfter": {},
+                  "type": "ApiConnection"
+                }
+              },
+              "expression": "@not(equals(body('Get_a_pipeline_run')?['status'], 'InProgress'))",
+              "limit": {
+                "count": 20,
+                "timeout": "PT1M"
+              },
+              "runAfter": {
+                "Response-Accepted": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Until"
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {},
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "inputs": {
+                "method": "GET",
+                "relativePath": "pipeline/{pipelineName}",
+                "schema": {}
+              },
+              "kind": "Http",
+              "type": "Request"
+            }
+          }
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "azuredatafactory": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/', 'azuredatafactory')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('Data Factory Connection'))]",
+                "connectionName": "[variables('Data Factory Connection')]"
+              },
+              "sql": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/', 'sql')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('SQL Connection'))]",
+                "connectionName": "[variables('SQL Connection')]"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "access-point": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name'))).accessEndpoint]"
+    }
+  }
+}
