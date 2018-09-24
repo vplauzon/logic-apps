@@ -1,0 +1,121 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Data Factory Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the data factory resource"
+      },
+      "defaultValue": "vplfactory"
+    },
+    "Service Principal App Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Application ID of Service Principal"
+      }
+    },
+    "Service Principal Object Id": {
+      "type": "string",
+      "metadata": {
+        "description": "Object ID of Service Principal"
+      }
+    },
+    "Service Principal App Url": {
+      "type": "string",
+      "metadata": {
+        "description": "Url of the Service Principal"
+      }
+    },
+    "Service Principal Secret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Secret of the Service Principal (for authentication purpose)"
+      }
+    },
+    "Service Principal Tenant": {
+      "type": "string",
+      "metadata": {
+        "description": "Tenant where the Service Principal lives"
+      }
+    }
+  },
+  "variables": {
+    "Data Factory Contributor Role Definition ID": "673868aa-7521-48a0-acc6-0f60742d39f5",
+    "Full Data Factory Contributor Role Definition ID": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', variables('Data Factory Contributor Role Definition ID'))]",
+    "Data Factory Assignment Name": "[concat(parameters('Data Factory Name'), '/Microsoft.Authorization/', guid(concat(resourceGroup().id), variables('Full Data Factory Contributor Role Definition ID')))]",
+    "Data Factory Connection": "df-connection-region",
+    "Logic App With Connection Name": "logic-with-connection"
+  },
+  "resources": [
+    {
+      "apiVersion": "2017-09-01-preview",
+      "type": "Microsoft.DataFactory/factories",
+      "name": "[parameters('Data Factory Name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "properties": {},
+      "resources": [
+        {
+          "apiVersion": "2017-09-01-preview",
+          "type": "pipelines",
+          "name": "master",
+          "dependsOn": [
+            "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
+          ],
+          "properties": {
+            "activities": [
+              {
+                "name": "Wait-Trivial-Activity",
+                "type": "Wait",
+                "typeProperties": {
+                  "waitTimeInSeconds": 42
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "Microsoft.DataFactory/factories/providers/roleAssignments",
+      "apiVersion": "2017-05-01",
+      "name": "[variables('Data Factory Assignment Name')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('Full Data Factory Contributor Role Definition ID')]",
+        "principalId": "[parameters('Service Principal Object Id')]"
+      }
+    },
+    {
+      "apiVersion": "2016-06-01",
+      "type": "microsoft.web/connections",
+      "name": "[variables('Data Factory Connection')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
+      ],
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuredatafactory')]"
+        },
+        "displayName": "Regional Data Factory Connection",
+        "parameterValues": {
+          "token:clientId": "[parameters('Service Principal App Id')]",
+          "token:clientSecret": "[parameters('Service Principal Secret')]",
+          "token:TenantId": "[parameters('Service Principal Tenant')]",
+          "token:resourceUri": "[parameters('Service Principal App Url')]",
+          "token:grantType": "client_credentials"
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "access-point": {
+      "type": "string",
+      "value": "42"
+    }
+  }
+}
