@@ -1,0 +1,54 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Data Factory Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the data factory resource"
+      },
+      "defaultValue": "vplfactory"
+    }
+  },
+  "variables": {
+    "Data Factory Connection": "df-connection-region",
+    "Data Factory id": "[resourceId('logic', 'Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
+  },
+  "resources": [
+    {
+      "apiVersion": "2017-09-01-preview",
+      "type": "Microsoft.DataFactory/factories",
+      "name": "[parameters('Data Factory Name')]",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "properties": {},
+      "resources": [
+        {
+          "apiVersion": "2017-09-01-preview",
+          "type": "pipelines",
+          "name": "master",
+          "dependsOn": [
+            "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
+          ],
+          "properties": {
+            "activities": [
+              {
+                "name": "Wait-Trivial-Activity",
+                "type": "Wait",
+                "typeProperties": {
+                  "waitTimeInSeconds": 42
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": {
+    "access-point": {
+      "type": "string",
+      "value": "42"
+    }
+  }
+}
