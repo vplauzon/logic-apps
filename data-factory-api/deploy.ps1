@@ -6,8 +6,8 @@ Param(
     [switch] $UploadArtifacts,
     [string] $StorageAccountName,
     [string] $StorageContainerName = $ResourceGroupName.ToLowerInvariant() + '-stageartifacts',
-    [string] $TemplateFile = 'deploy.json',
-    [string] $TemplateParametersFile = 'deploy.parameters.json',
+    [string] $TemplateFile = 'deploy-df-api.json',
+    [string] $TemplateParametersFile = 'deploy-df-api.parameters.json',
     [string] $ArtifactStagingDirectory = '.',
     [string] $DSCSourceFolder = 'DSC',
     [switch] $ValidateOnly
