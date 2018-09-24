@@ -98,7 +98,7 @@
         "api": {
           "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuredatafactory')]"
         },
-        "displayName": "Data Factory Connection",
+        "displayName": "Service Princiapl Data Factory Connection",
         "parameterValues": {
           "token:clientId": "[parameters('Service Principal App Id')]",
           "token:clientSecret": "[parameters('Service Principal Secret')]",
@@ -118,7 +118,7 @@
         "api": {
           "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuredatafactory')]"
         },
-        "displayName": "Regional Data Factory Connection"
+        "displayName": "Current User Data Factory Connection"
       }
     },
     {
