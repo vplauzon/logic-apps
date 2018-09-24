@@ -21,12 +21,6 @@
         "description": "Object ID of Service Principal"
       }
     },
-    "Service Principal App Url": {
-      "type": "string",
-      "metadata": {
-        "description": "Url of the Service Principal"
-      }
-    },
     "Service Principal Secret": {
       "type": "securestring",
       "metadata": {
@@ -41,16 +35,20 @@
     }
   },
   "variables": {
+    "Single Quote": "'",
+    "Pipeline Name": "master",
     "Data Factory Contributor Role Definition ID": "673868aa-7521-48a0-acc6-0f60742d39f5",
     "Full Data Factory Contributor Role Definition ID": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', variables('Data Factory Contributor Role Definition ID'))]",
     "Data Factory Assignment Name": "[concat(parameters('Data Factory Name'), '/Microsoft.Authorization/', guid(concat(resourceGroup().id), variables('Full Data Factory Contributor Role Definition ID')))]",
-    "Data Factory Connection": "df-connection-region",
-    "Logic App With Connection Name": "logic-with-connection"
+    "Data Factory Connection Name": "df-connection-region",
+    "Data Factory id": "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]",
+    "Pipeline Path": "[concat(variables('Data Factory id'), '/pipelines/', variables('Pipeline Name'), '/CreateRun')]",
+    "Logic App Name": "logic-app"
   },
   "resources": [
     {
-      "apiVersion": "2017-09-01-preview",
       "type": "Microsoft.DataFactory/factories",
+      "apiVersion": "2017-09-01-preview",
       "name": "[parameters('Data Factory Name')]",
       "location": "[resourceGroup().location]",
       "tags": {},
@@ -59,7 +57,7 @@
         {
           "apiVersion": "2017-09-01-preview",
           "type": "pipelines",
-          "name": "master",
+          "name": "[variables('Pipeline Name')]",
           "dependsOn": [
             "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
           ],
@@ -90,9 +88,9 @@
       }
     },
     {
-      "apiVersion": "2016-06-01",
       "type": "microsoft.web/connections",
-      "name": "[variables('Data Factory Connection')]",
+      "apiVersion": "2016-06-01",
+      "name": "[variables('Data Factory Connection Name')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
         "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
@@ -106,8 +104,69 @@
           "token:clientId": "[parameters('Service Principal App Id')]",
           "token:clientSecret": "[parameters('Service Principal Secret')]",
           "token:TenantId": "[parameters('Service Principal Tenant')]",
-          "token:resourceUri": "[parameters('Service Principal App Url')]",
+          "token:resourceUri": "https://management.core.windows.net/",
           "token:grantType": "client_credentials"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2016-06-01",
+      "name": "[variables('Logic App Name')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/connections', variables('Data Factory Connection Name'))]"
+      ],
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "Create_a_pipeline_run": {
+              "type": "ApiConnection",
+              "inputs": {
+                "host": {
+                  "connection": {
+                    "name": "@parameters('$connections')['azuredatafactory']['connectionId']"
+                  }
+                },
+                "method": "post",
+                "path": "[variables('Pipeline Path')]",
+                "queries": {
+                  "x-ms-api-version": "2017-09-01-preview"
+                }
+              },
+              "runAfter": {}
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "manual": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {},
+                "method": "GET"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+              "azuredatafactory": {
+                "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/', 'azuredatafactory')]",
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('Data Factory Connection Name'))]",
+                "connectionName": "[variables('Data Factory Connection Name')]"
+              }
+            }
+          }
         }
       }
     }
@@ -115,7 +174,7 @@
   "outputs": {
     "access-point": {
       "type": "string",
-      "value": "42"
+      "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name'))).accessEndpoint]"
     }
   }
 }
