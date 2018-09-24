@@ -40,7 +40,8 @@
     "Data Factory Contributor Role Definition ID": "673868aa-7521-48a0-acc6-0f60742d39f5",
     "Full Data Factory Contributor Role Definition ID": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', variables('Data Factory Contributor Role Definition ID'))]",
     "Data Factory Assignment Name": "[concat(parameters('Data Factory Name'), '/Microsoft.Authorization/', guid(concat(resourceGroup().id), variables('Full Data Factory Contributor Role Definition ID')))]",
-    "Data Factory Connection Name": "df-connection-region",
+    "Principal Data Factory Connection Name": "df-connection-principal",
+    "Current User Data Factory Connection Name": "df-connection-current-user",
     "Data Factory id": "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]",
     "Pipeline Path": "[concat(variables('Data Factory id'), '/pipelines/', variables('Pipeline Name'), '/CreateRun')]",
     "Logic App Name": "logic-app"
@@ -90,16 +91,14 @@
     {
       "type": "microsoft.web/connections",
       "apiVersion": "2016-06-01",
-      "name": "[variables('Data Factory Connection Name')]",
+      "name": "[variables('Principal Data Factory Connection Name')]",
       "location": "[resourceGroup().location]",
-      "dependsOn": [
-        "[resourceId('Microsoft.DataFactory/factories', parameters('Data Factory Name'))]"
-      ],
+      "dependsOn": [],
       "properties": {
         "api": {
           "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuredatafactory')]"
         },
-        "displayName": "Regional Data Factory Connection",
+        "displayName": "Data Factory Connection",
         "parameterValues": {
           "token:clientId": "[parameters('Service Principal App Id')]",
           "token:clientSecret": "[parameters('Service Principal Secret')]",
@@ -110,12 +109,25 @@
       }
     },
     {
+      "type": "microsoft.web/connections",
+      "apiVersion": "2016-06-01",
+      "name": "[variables('Current User Data Factory Connection Name')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "properties": {
+        "api": {
+          "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/azuredatafactory')]"
+        },
+        "displayName": "Regional Data Factory Connection"
+      }
+    },
+    {
       "type": "Microsoft.Logic/workflows",
       "apiVersion": "2016-06-01",
       "name": "[variables('Logic App Name')]",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/connections', variables('Data Factory Connection Name'))]"
+        "[resourceId('Microsoft.Web/connections', variables('Principal Data Factory Connection Name'))]"
       ],
       "properties": {
         "definition": {
@@ -162,8 +174,8 @@
             "value": {
               "azuredatafactory": {
                 "id": "[concat(subscription().id, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/managedApis/', 'azuredatafactory')]",
-                "connectionId": "[resourceId('Microsoft.Web/connections', variables('Data Factory Connection Name'))]",
-                "connectionName": "[variables('Data Factory Connection Name')]"
+                "connectionId": "[resourceId('Microsoft.Web/connections', variables('Principal Data Factory Connection Name'))]",
+                "connectionName": "[variables('Principal Data Factory Connection Name')]"
               }
             }
           }
