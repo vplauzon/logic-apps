@@ -1,0 +1,107 @@
+[
+    {
+        "name": "master-1",
+        "children": [
+            {
+                "name": "child-1-A",
+                "children": [
+                    {
+                        "name": "child-1-A-I",
+                        "children": [
+                            {
+                                "name": "child-1-A-I-Alpha",
+                                "children": []
+                            },
+                            {
+                                "name": "child-1-A-I-Beta",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "name": "child-1-A-II",
+                        "children": [
+                            {
+                                "name": "child-1-A-II-Alpha",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "name": "child-1-A-III",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "name": "child-1-B",
+                "children": [
+                    {
+                        "name": "child-1-B-I",
+                        "children": []
+                    },
+                    {
+                        "name": "child-1-B-II",
+                        "children": [
+                            {
+                                "name": "child-1-B-II-Alpha",
+                                "children": []
+                            },
+                            {
+                                "name": "child-1-B-II-Beta",
+                                "children": []
+                            }
+                        ]
+                    },
+                    {
+                        "name": "child-1-B-III",
+                        "children": [
+                            {
+                                "name": "child-1-B-III-Alpha",
+                                "children": []
+                            },
+                            {
+                                "name": "child-1-B-III-Beta",
+                                "children": []
+                            },
+                            {
+                                "name": "child-1-B-III-Gamma",
+                                "children": []
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "name": "master-2",
+        "children": [
+            {
+                "name": "child-2-A",
+                "children": [
+                    {
+                        "name": "child-2-A-I",
+                        "children": []
+                    },
+                    {
+                        "name": "child-2-A-II",
+                        "children": []
+                    },
+                    {
+                        "name": "child-2-A-III",
+                        "children": []
+                    },
+                    {
+                        "name": "child-2-A-IV",
+                        "children": []
+                    }
+                ]
+            },
+            {
+                "name": "child-2-B",
+                "children": []
+            }
+        ]
+    }
+]

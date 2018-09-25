@@ -1,0 +1,268 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {},
+  "variables": {
+    "Logic App Name": "flatening-logic-app"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2016-06-01",
+      "name": "[variables('Logic App Name')]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {},
+          "triggers": {
+            "http-post": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {}
+              }
+            }
+          },
+          "actions": {
+            "Bad-Input-Response": {
+              "runAfter": {
+                "parse-payload": [
+                  "Failed"
+                ]
+              },
+              "type": "Response",
+              "kind": "Http",
+              "inputs": {
+                "body": "Invalid Input",
+                "statusCode": 400
+              }
+            },
+            "Bad-Loop-Response": {
+              "runAfter": {
+                "Until": [
+                  "Failed"
+                ]
+              },
+              "type": "Response",
+              "kind": "Http",
+              "inputs": {
+                "body": "internal error...",
+                "statusCode": 500
+              }
+            },
+            "Success-Response": {
+              "runAfter": {
+                "Until": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response",
+              "kind": "Http",
+              "inputs": {
+                "body": {
+                  "message": "Well done!",
+                  "processed": "@variables('return-array')"
+                },
+                "statusCode": 200
+              }
+            },
+            "Until": {
+              "actions": {
+                "blank-next-items": {
+                  "runAfter": {},
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "next-items",
+                    "value": []
+                  }
+                },
+                "debug-current-items": {
+                  "runAfter": {
+                    "blank-next-items": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@variables('current-items')"
+                },
+                "for-each-node": {
+                  "foreach": "@variables('current-items')",
+                  "actions": {
+                    "append-return-array": {
+                      "runAfter": {},
+                      "type": "AppendToArrayVariable",
+                      "inputs": {
+                        "name": "return-array",
+                        "value": "@{items('for-each-node').name}"
+                      }
+                    },
+                    "debug-next-items": {
+                      "runAfter": {
+                        "for-each-child": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Compose",
+                      "inputs": "@variables('next-items')"
+                    },
+                    "for-each-child": {
+                      "foreach": "@items('for-each-node')['children']",
+                      "actions": {
+                        "append-next-items": {
+                          "runAfter": {},
+                          "type": "AppendToArrayVariable",
+                          "inputs": {
+                            "name": "next-items",
+                            "value": "@items('for-each-child')"
+                          }
+                        }
+                      },
+                      "runAfter": {
+                        "append-return-array": [
+                          "Succeeded"
+                        ]
+                      },
+                      "type": "Foreach",
+                      "runtimeConfiguration": {
+                        "concurrency": {
+                          "repetitions": 1
+                        }
+                      }
+                    }
+                  },
+                  "runAfter": {
+                    "debug-current-items": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Foreach",
+                  "runtimeConfiguration": {
+                    "concurrency": {
+                      "repetitions": 1
+                    }
+                  }
+                },
+                "set-current-items": {
+                  "runAfter": {
+                    "for-each-node": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "SetVariable",
+                  "inputs": {
+                    "name": "current-items",
+                    "value": "@variables('next-items')"
+                  }
+                }
+              },
+              "runAfter": {
+                "init-next-items": [
+                  "Succeeded"
+                ]
+              },
+              "expression": "@empty(variables('current-items'))",
+              "limit": {
+                "count": 5,
+                "timeout": "PT1H"
+              },
+              "type": "Until"
+            },
+            "init-current-items": {
+              "runAfter": {
+                "init-return-array": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "current-items",
+                    "type": "Array",
+                    "value": "@body('parse-payload')"
+                  }
+                ]
+              }
+            },
+            "init-next-items": {
+              "runAfter": {
+                "init-current-items": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "next-items",
+                    "type": "Array",
+                    "value": []
+                  }
+                ]
+              }
+            },
+            "init-return-array": {
+              "runAfter": {
+                "parse-payload": [
+                  "Succeeded"
+                ]
+              },
+              "type": "InitializeVariable",
+              "inputs": {
+                "variables": [
+                  {
+                    "name": "return-array",
+                    "type": "Array",
+                    "value": []
+                  }
+                ]
+              }
+            },
+            "parse-payload": {
+              "runAfter": {},
+              "type": "ParseJson",
+              "inputs": {
+                "content": "@triggerBody()",
+                "schema": {
+                  "definitions": {
+                    "node": {
+                      "description": "node",
+                      "properties": {
+                        "children": {
+                          "items": {
+                            "$ref": "#/definitions/node"
+                          },
+                          "type": "array"
+                        },
+                        "name": {
+                          "required": true,
+                          "type": "string"
+                        }
+                      },
+                      "title": "node",
+                      "type": "object"
+                    }
+                  },
+                  "items": {
+                    "$ref": "#/definitions/node"
+                  },
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "parameters": {}
+      }
+    }
+  ],
+  "outputs": {
+    "access-point": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name'))).accessEndpoint]"
+    }
+  }
+}

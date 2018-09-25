@@ -1,0 +1,25 @@
+{
+    "definitions": {
+        "node": {
+            "title": "node",
+            "description": "node",
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "required": true
+                }, 
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/node"
+                    }
+                }
+            }
+        }
+    },
+    "type": "array",
+    "items": {
+        "$ref": "#/definitions/node"
+    }
+}
