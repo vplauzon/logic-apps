@@ -6,8 +6,8 @@ Param(
     [switch] $UploadArtifacts,
     [string] $StorageAccountName,
     [string] $StorageContainerName = $ResourceGroupName.ToLowerInvariant() + '-stageartifacts',
-    [string] $TemplateFile = 'deploy-flaten.json',
-    [string] $TemplateParametersFile = 'deploy-flaten.parameters.json',
+    [string] $TemplateFile = 'deploy-flat.json',
+    [string] $TemplateParametersFile = 'deploy-flat.parameters.json',
     [string] $ArtifactStagingDirectory = '.',
     [string] $DSCSourceFolder = 'DSC',
     [switch] $ValidateOnly
