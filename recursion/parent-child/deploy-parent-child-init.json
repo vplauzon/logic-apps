@@ -68,10 +68,5 @@
             }
         }
     ],
-    "outputs": {
-        "access-point": {
-            "type": "string",
-            "value": "[reference(resourceId('Microsoft.Logic/workflows', parameters('Parent Logic App Name'))).accessEndpoint]"
-        }
-    }
+    "outputs": {}
 }

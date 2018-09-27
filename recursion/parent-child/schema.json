@@ -1,0 +1,8 @@
+{
+    "properties": {
+        "iterations": {
+            "type": "integer"
+        }
+    },
+    "type": "object"
+}
