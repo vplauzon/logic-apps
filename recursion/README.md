@@ -2,7 +2,7 @@
 
 This project shows how to handle recursion in a Logic App.  We explore two ways.
 
-See the [following article](todo) for details.
+See the [following article](https://vincentlauzon.com/2018/09/28/handling-recursivity-in-logic-apps/) for details.
 
 ## Parent-Child
 
