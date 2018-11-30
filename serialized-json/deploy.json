@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "serialization-sample",
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "tags": {
+        "displayName": "LogicApp"
+      },
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "compose-some-json": {
+              "type": "Compose",
+              "inputs": {
+                "name": "John Smith",
+                "age": 42
+              },
+              "runAfter": {}
+            },
+            "use-json": {
+              "type": "Compose",
+              "inputs": {
+                "serialized": "@{outputs('compose-some-json')}",
+                "native": "@outputs('compose-some-json')"
+              },
+              "runAfter": {
+                "compose-some-json": [
+                  "Succeeded"
+                ]
+              }
+            }
+          },
+          "parameters": {},
+          "triggers": {
+            "test": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {}
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {}
+      }
+    }
+  ],
+  "outputs": {}
+}
