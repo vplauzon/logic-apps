@@ -10,15 +10,20 @@
       "defaultValue": "my-vault"
     }
   },
-  "variables": {},
+  "variables": {
+    "Logic App Name": "mylogic-app"
+  },
   "resources": [
     {
-      "name": "mylogic-app",
+      "name": "[variables('Logic App Name')]",
       "type": "Microsoft.Logic/workflows",
       "apiVersion": "2017-07-01",
       "location": "[resourceGroup().location]",
       "dependsOn": [],
       "tags": {
+      },
+      "identity": {
+        "type": "SystemAssigned"
       },
       "properties": {
         "definition": {
@@ -76,9 +81,9 @@
     }
   ],
   "outputs": {
-    "sub": {
+    "Managed Identity": {
       "type": "object",
-      "value": "[subscription()]"
+      "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity]"
     }
   }
 }
