@@ -1,0 +1,84 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Vault Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the key vault resource"
+      },
+      "defaultValue": "my-vault"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "name": "mylogic-app",
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "tags": {
+      },
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {},
+          "parameters": {},
+          "triggers": {
+            "http-post": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {},
+                "method": "POST"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {}
+      }
+    },
+    {
+      "name": "[parameters('Vault Name')]",
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2018-02-14",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "properties": {
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [],
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        }
+      },
+      "resources": [
+        {
+          "name": "my-secret",
+          "type": "secrets",
+          "apiVersion": "2018-02-14",
+          "tags": {},
+          "dependsOn": [
+            "[resourceId('Microsoft.KeyVault/vaults', parameters('Vault Name'))]"
+          ],
+          "properties": {
+            "value": "hello-world",
+            "contentType": "",
+            "attributes": {
+              "enabled": "true"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "outputs": {
+    "sub": {
+      "type": "object",
+      "value": "[subscription()]"
+    }
+  }
+}
