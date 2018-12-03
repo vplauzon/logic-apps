@@ -51,10 +51,23 @@
       "type": "Microsoft.KeyVault/vaults",
       "apiVersion": "2018-02-14",
       "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Logic/workflows', variables('Logic App Name'))]"
+      ],
       "tags": {},
       "properties": {
         "tenantId": "[subscription().tenantId]",
-        "accessPolicies": [],
+        "accessPolicies": [
+          {
+            "tenantId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity.tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity.principalId]",
+            "permissions": {
+              "secrets": [
+                "get"
+              ]
+            }
+          }
+        ],
         "sku": {
           "family": "A",
           "name": "standard"
