@@ -11,17 +11,57 @@
     }
   },
   "variables": {
-    "Logic App Name": "mylogic-app"
+    "Get Secret App Name": "get-secret-app",
+    "Demo App Name": "demo-app"
   },
   "resources": [
     {
-      "name": "[variables('Logic App Name')]",
+      "name": "[variables('Demo App Name')]",
       "type": "Microsoft.Logic/workflows",
       "apiVersion": "2017-07-01",
       "location": "[resourceGroup().location]",
       "dependsOn": [],
       "tags": {
-        "displayName": "LogicApp"
+      },
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
+          "triggers": {
+            "http-post": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {},
+                "method": "GET"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {
+          "$connections": {
+            "value": {
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "[variables('Get Secret App Name')]",
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [],
+      "tags": {
       },
       "identity": {
         "type": "SystemAssigned"
@@ -30,6 +70,79 @@
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
           "actions": {
+            "response-secret": {
+              "inputs": {
+                "body": {
+                  "value": "@body('parse-secret')?['value']"
+                },
+                "statusCode": 200
+              },
+              "kind": "http",
+              "runAfter": {
+                "parse-secret": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response"
+            },
+            "parse-secret": {
+              "inputs": {
+                "content": "@body('get-secret')",
+                "schema": {
+                  "properties": {
+                    "attributes": {
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "recoveryLevel": {
+                          "type": "string"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "contentType": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "properties": {},
+                      "type": "object"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "runAfter": {
+                "get-secret": [
+                  "Succeeded"
+                ]
+              },
+              "type": "ParseJson"
+            },
+            "get-current-version": {
+              "inputs": {
+                "authentication": {
+                  "audience": "https://vault.azure.net",
+                  "type": "ManagedServiceIdentity"
+                },
+                "method": "GET",
+                "uri": "https://my-vpl-vault.vault.azure.net/secrets/my-secret?api-version=7.0"
+              },
+              "runAfter": {},
+              "type": "Http"
+            },
             "get-secret": {
               "inputs": {
                 "authentication": {
@@ -45,18 +158,6 @@
                 ]
               },
               "type": "Http"
-            },
-            "get-current-version": {
-              "type": "Http",
-              "inputs": {
-                "method": "GET",
-                "uri": "https://my-vpl-vault.vault.azure.net/secrets/my-secret?api-version=7.0",
-                "authentication": {
-                  "type": "ManagedServiceIdentity",
-                  "audience": "https://vault.azure.net"
-                }
-              },
-              "runAfter": {}
             },
             "parse-version": {
               "inputs": {
@@ -105,24 +206,19 @@
               "type": "ParseJson"
             }
           },
-          "parameters": {
-            "$connections": {
-              "defaultValue": {},
-              "type": "Object"
-            }
-          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {},
+          "parameters": {},
           "triggers": {
             "http-post": {
               "type": "Request",
               "kind": "Http",
               "inputs": {
                 "schema": {},
-                "method": "POST"
+                "method": "GET"
               }
             }
-          },
-          "contentVersion": "1.0.0.0",
-          "outputs": {}
+          }
         },
         "parameters": {
           "$connections": {
@@ -138,15 +234,15 @@
       "apiVersion": "2018-02-14",
       "location": "[resourceGroup().location]",
       "dependsOn": [
-        "[resourceId('Microsoft.Logic/workflows', variables('Logic App Name'))]"
+        "[resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name'))]"
       ],
       "tags": {},
       "properties": {
         "tenantId": "[subscription().tenantId]",
         "accessPolicies": [
           {
-            "tenantId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity.tenantId]",
-            "objectId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity.principalId]",
+            "tenantId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name')), '2017-07-01', 'Full').identity.tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name')), '2017-07-01', 'Full').identity.principalId]",
             "permissions": {
               "secrets": [
                 "get",
@@ -183,7 +279,7 @@
   "outputs": {
     "Managed Identity": {
       "type": "object",
-      "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity]"
+      "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name')), '2017-07-01', 'Full').identity]"
     }
   }
 }
