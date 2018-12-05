@@ -21,6 +21,7 @@
       "location": "[resourceGroup().location]",
       "dependsOn": [],
       "tags": {
+        "displayName": "LogicApp"
       },
       "identity": {
         "type": "SystemAssigned"
@@ -28,8 +29,88 @@
       "properties": {
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
-          "actions": {},
-          "parameters": {},
+          "actions": {
+            "get-secret": {
+              "inputs": {
+                "authentication": {
+                  "audience": "https://vault.azure.net",
+                  "type": "ManagedServiceIdentity"
+                },
+                "method": "GET",
+                "uri": "@{body('parse-version')['id']}?api-version=7.0"
+              },
+              "runAfter": {
+                "parse-version": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Http"
+            },
+            "get-current-version": {
+              "type": "Http",
+              "inputs": {
+                "method": "GET",
+                "uri": "https://my-vpl-vault.vault.azure.net/secrets/my-secret?api-version=7.0",
+                "authentication": {
+                  "type": "ManagedServiceIdentity",
+                  "audience": "https://vault.azure.net"
+                }
+              },
+              "runAfter": {}
+            },
+            "parse-version": {
+              "inputs": {
+                "content": "@body('get-current-version')",
+                "schema": {
+                  "properties": {
+                    "attributes": {
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "recoveryLevel": {
+                          "type": "string"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "contentType": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "properties": {},
+                      "type": "object"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "runAfter": {
+                "get-current-version": [
+                  "Succeeded"
+                ]
+              },
+              "type": "ParseJson"
+            }
+          },
+          "parameters": {
+            "$connections": {
+              "defaultValue": {},
+              "type": "Object"
+            }
+          },
           "triggers": {
             "http-post": {
               "type": "Request",
@@ -43,7 +124,12 @@
           "contentVersion": "1.0.0.0",
           "outputs": {}
         },
-        "parameters": {}
+        "parameters": {
+          "$connections": {
+            "value": {
+            }
+          }
+        }
       }
     },
     {
@@ -63,7 +149,8 @@
             "objectId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Logic App Name')), '2017-07-01', 'Full').identity.principalId]",
             "permissions": {
               "secrets": [
-                "get"
+                "get",
+                "list"
               ]
             }
           }
