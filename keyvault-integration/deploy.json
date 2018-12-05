@@ -220,12 +220,7 @@
             }
           }
         },
-        "parameters": {
-          "$connections": {
-            "value": {
-            }
-          }
-        }
+        "parameters": {}
       }
     },
     {
