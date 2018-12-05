@@ -28,12 +28,7 @@
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
           "actions": {
           },
-          "parameters": {
-            "$connections": {
-              "defaultValue": {},
-              "type": "Object"
-            }
-          },
+          "parameters": {},
           "triggers": {
             "http-post": {
               "type": "Request",
@@ -47,12 +42,7 @@
           "contentVersion": "1.0.0.0",
           "outputs": {}
         },
-        "parameters": {
-          "$connections": {
-            "value": {
-            }
-          }
-        }
+        "parameters": {}
       }
     },
     {
@@ -70,67 +60,6 @@
         "definition": {
           "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
           "actions": {
-            "response-secret": {
-              "inputs": {
-                "body": {
-                  "value": "@body('parse-secret')?['value']"
-                },
-                "statusCode": 200
-              },
-              "kind": "http",
-              "runAfter": {
-                "parse-secret": [
-                  "Succeeded"
-                ]
-              },
-              "type": "Response"
-            },
-            "parse-secret": {
-              "inputs": {
-                "content": "@body('get-secret')",
-                "schema": {
-                  "properties": {
-                    "attributes": {
-                      "properties": {
-                        "created": {
-                          "type": "integer"
-                        },
-                        "enabled": {
-                          "type": "boolean"
-                        },
-                        "recoveryLevel": {
-                          "type": "string"
-                        },
-                        "updated": {
-                          "type": "integer"
-                        }
-                      },
-                      "type": "object"
-                    },
-                    "contentType": {
-                      "type": "string"
-                    },
-                    "id": {
-                      "type": "string"
-                    },
-                    "tags": {
-                      "properties": {},
-                      "type": "object"
-                    },
-                    "value": {
-                      "type": "string"
-                    }
-                  },
-                  "type": "object"
-                }
-              },
-              "runAfter": {
-                "get-secret": [
-                  "Succeeded"
-                ]
-              },
-              "type": "ParseJson"
-            },
             "get-current-version": {
               "inputs": {
                 "authentication": {
@@ -138,25 +67,9 @@
                   "type": "ManagedServiceIdentity"
                 },
                 "method": "GET",
-                "uri": "https://my-vpl-vault.vault.azure.net/secrets/my-secret?api-version=7.0"
+                "uri": "https://@{parameters('vault-name')}.vault.azure.net/secrets/my-secret?api-version=7.0"
               },
               "runAfter": {},
-              "type": "Http"
-            },
-            "get-secret": {
-              "inputs": {
-                "authentication": {
-                  "audience": "https://vault.azure.net",
-                  "type": "ManagedServiceIdentity"
-                },
-                "method": "GET",
-                "uri": "@{body('parse-version')['id']}?api-version=7.0"
-              },
-              "runAfter": {
-                "parse-version": [
-                  "Succeeded"
-                ]
-              },
               "type": "Http"
             },
             "parse-version": {
@@ -204,11 +117,92 @@
                 ]
               },
               "type": "ParseJson"
+            },
+            "get-secret": {
+              "inputs": {
+                "authentication": {
+                  "audience": "https://vault.azure.net",
+                  "type": "ManagedServiceIdentity"
+                },
+                "method": "GET",
+                "uri": "@{body('parse-version')['id']}?api-version=7.0"
+              },
+              "runAfter": {
+                "parse-version": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Http"
+            },
+            "parse-secret": {
+              "inputs": {
+                "content": "@body('get-secret')",
+                "schema": {
+                  "properties": {
+                    "attributes": {
+                      "properties": {
+                        "created": {
+                          "type": "integer"
+                        },
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "recoveryLevel": {
+                          "type": "string"
+                        },
+                        "updated": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "contentType": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "tags": {
+                      "properties": {},
+                      "type": "object"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "runAfter": {
+                "get-secret": [
+                  "Succeeded"
+                ]
+              },
+              "type": "ParseJson"
+            },
+            "response-secret": {
+              "inputs": {
+                "body": {
+                  "value": "@body('parse-secret')?['value']"
+                },
+                "statusCode": 200
+              },
+              "kind": "http",
+              "runAfter": {
+                "parse-secret": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response"
             }
           },
           "contentVersion": "1.0.0.0",
           "outputs": {},
-          "parameters": {},
+          "parameters": {
+            "vault-name": {
+              "type": "string"
+            }
+          },
           "triggers": {
             "http-post": {
               "type": "Request",
@@ -220,7 +214,11 @@
             }
           }
         },
-        "parameters": {}
+        "parameters": {
+          "vault-name": {
+            "value": "[parameters('Vault Name')]"
+          }
+        }
       }
     },
     {
