@@ -278,8 +278,7 @@
             "objectId": "[reference(resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name')), '2017-07-01', 'Full').identity.principalId]",
             "permissions": {
               "secrets": [
-                "get",
-                "list"
+                "get"
               ]
             }
           }
