@@ -12,39 +12,11 @@
   },
   "variables": {
     "Get Secret App Name": "get-secret-app",
-    "Demo App Name": "demo-app"
+    "Demo App Name": "demo-app",
+    "Secret Name": "my-secret",
+    "Secret Value": "42 is the answer"
   },
   "resources": [
-    {
-      "name": "[variables('Demo App Name')]",
-      "type": "Microsoft.Logic/workflows",
-      "apiVersion": "2017-07-01",
-      "location": "[resourceGroup().location]",
-      "dependsOn": [],
-      "tags": {
-      },
-      "properties": {
-        "definition": {
-          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
-          "actions": {
-          },
-          "parameters": {},
-          "triggers": {
-            "http-post": {
-              "type": "Request",
-              "kind": "Http",
-              "inputs": {
-                "schema": {},
-                "method": "GET"
-              }
-            }
-          },
-          "contentVersion": "1.0.0.0",
-          "outputs": {}
-        },
-        "parameters": {}
-      }
-    },
     {
       "name": "[variables('Get Secret App Name')]",
       "type": "Microsoft.Logic/workflows",
@@ -67,7 +39,7 @@
                   "type": "ManagedServiceIdentity"
                 },
                 "method": "GET",
-                "uri": "https://@{parameters('vault-name')}.vault.azure.net/secrets/my-secret?api-version=7.0"
+                "uri": "https://@{parameters('vault-name')}.vault.azure.net/secrets/@{triggerBody()['secret']}?api-version=7.0"
               },
               "runAfter": {},
               "type": "Http"
@@ -208,8 +180,16 @@
               "type": "Request",
               "kind": "Http",
               "inputs": {
-                "schema": {},
-                "method": "GET"
+                "schema": {
+                  "properties": {
+                    "secret": {
+                      "type": "string",
+                      "required": true
+                    }
+                  },
+                  "type": "object"
+                },
+                "method": "POST"
               }
             }
           }
@@ -219,6 +199,66 @@
             "value": "[parameters('Vault Name')]"
           }
         }
+      }
+    },
+    {
+      "name": "[variables('Demo App Name')]",
+      "type": "Microsoft.Logic/workflows",
+      "apiVersion": "2017-07-01",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name'))]"
+      ],
+      "tags": {
+      },
+      "properties": {
+        "definition": {
+          "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+          "actions": {
+            "get-secret-app": {
+              "inputs": {
+                "body": {
+                  "secret": "[variables('Secret Name')]"
+                },
+                "host": {
+                  "triggerName": "http-post",
+                  "workflow": {
+                    "id": "[resourceId('Microsoft.Logic/workflows', variables('Get Secret App Name'))]"
+                  }
+                }
+              },
+              "runAfter": {},
+              "type": "Workflow"
+            },
+            "response-get-secret-response": {
+              "inputs": {
+                "body": "@body('get-secret-app')",
+                "statusCode": 200
+              },
+              "kind": "http",
+              "runAfter": {
+                "get-secret-app": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Response"
+            }
+          },
+          "parameters": {},
+          "triggers": {
+            "http-post": {
+              "type": "Request",
+              "kind": "Http",
+              "inputs": {
+                "schema": {},
+                "method": "GET"
+              }
+            }
+          },
+          "contentVersion": "1.0.0.0",
+          "outputs": {}
+        },
+        "parameters": {}
       }
     },
     {
@@ -251,7 +291,7 @@
       },
       "resources": [
         {
-          "name": "my-secret",
+          "name": "[variables('Secret Name')]",
           "type": "secrets",
           "apiVersion": "2018-02-14",
           "tags": {},
@@ -259,7 +299,7 @@
             "[resourceId('Microsoft.KeyVault/vaults', parameters('Vault Name'))]"
           ],
           "properties": {
-            "value": "hello-world",
+            "value": "[variables('Secret Value')]",
             "contentType": "",
             "attributes": {
               "enabled": "true"
